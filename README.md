@@ -14,6 +14,15 @@ As stated before polTorrent is only avaliable of Linux/Unix systems. When it com
 any ports for MacOS, IOS and Android. 
 
 ## Example of usage
+To use polTorrent just type
+```SHELL
+./polTorrent <magnet-url>
+```
 
 https://user-images.githubusercontent.com/84101627/181853622-df5d6e14-83ab-487b-8cfd-375537fc3b22.mp4
 
+## Future plans
+- Add ability to use .torrent files
+- Support for multiple torrents
+- Port application to Windows
+- Show better data (peers, seeding data, etc.)
