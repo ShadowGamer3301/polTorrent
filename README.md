@@ -12,3 +12,8 @@ Linux/Unix systems (in theory it should be able to compile on Windows but I have
 ## Ports
 As stated before polTorrent is only avaliable of Linux/Unix systems. When it comes to windows I'm planing to release a port within 6 months, but I'm not planing to release
 any ports for MacOS, IOS and Android. 
+
+## Example of usage
+
+https://user-images.githubusercontent.com/84101627/181853622-df5d6e14-83ab-487b-8cfd-375537fc3b22.mp4
+
