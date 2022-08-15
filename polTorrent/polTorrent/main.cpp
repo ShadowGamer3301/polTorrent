@@ -1,10 +1,12 @@
 //STD includes
 #include <iostream>
+#include <libtorrent/peer_info.hpp>
 #include <thread>
 #include <chrono>
 #include <fstream>
 #include <csignal>
 #include <sstream>
+#include <vector>
 
 //Spdlog includes
 #include <spdlog/spdlog.h>
@@ -29,28 +31,32 @@ namespace pT
 {
     //Variables that will allow to save files to custom directories
     std::string g_SavePath = "."; //By default it's current directory
+    std::string g_SessionPath; //By default it's current directory
+    std::string g_ResumePath; //By default it's current directory
+    std::vector<lt::peer_info> g_PeerData;
     
-    inline void HandleOutputPath(std::string save_path) { g_SavePath = save_path; }
+    inline void HandleSessionAndResumeFile() 
+    {
+        std::stringstream ss_res;
+        ss_res << getenv("HOME") << "/.resume";
+        g_ResumePath = ss_res.str();
+
+        std::stringstream ss_ses;
+        ss_ses << getenv("HOME") << "/.session";
+        g_SessionPath = ss_ses.str();
+    }
+
+    inline void HandleOutputPath(std::string save_path) { 
+        g_SavePath = save_path; }
     
     inline void HandleArguments(int argc, char** argv)
-    {
-        std::stringstream ss;
-        ss << "Detected " << argc-2 << " arguments";
-        
-        spdlog::info(ss.str());
-        
-        ss.str(std::string()); //Clear stringstream
-        
+    {        
         for(int i = 2; i < argc; i++) //We start from the third argument since 1st is application name and 2nd is torrent url
         {
-            ss << "Detected " << argv[i] << " argument";
-            spdlog::info(ss.str());
-            ss.str(std::string()); //Clear stringstream
-            
             //Detect which argument we are dealing with
             if(std::strcmp(argv[i], "-s")) //Custom save path
             {
-                HandleOutputPath(argv[i+1]);
+                g_SavePath = argv[i];
                 i++;
             }
         }
@@ -60,7 +66,7 @@ namespace pT
     //Displays simple hello message
     inline void HelloMsg() {
         spdlog::info("polTorrent by Zbigniew Przybyła");
-        spdlog::info("Open beta v0.0.2");
+        spdlog::info("Open beta v0.0.4");
         spdlog::info("Released under GNU GPLv3 license");
     }
     
@@ -90,20 +96,29 @@ namespace pT
     
     inline void SigHandler(int) {Shut_Down = true;}
 
-    inline void ShowDownloadUploadState(lt::torrent_status s)
+    inline void ShowDownloadUploadState(lt::torrent_status s, lt::torrent_handle h)
     {
-        std::cout << '\r' << TorrentState(s.state) << ' '
-        << (s.download_payload_rate / 1000) << " kB/s "
-        << (s.total_done / 1000) << " kB ("
-        << (s.progress_ppm / 10000) << "%) downloaded ("
-        << s.num_peers << " peers)\x1b[K";
-        std::cout.flush();
+        system("clear");
+        std::cout << "Torrent state: " << TorrentState(s.state) << std::endl;
+        std::cout << "Torrent name: " << (s.name) << std::endl;
+        std::cout << "Total downloaded: " << (s.total_done / 1000000) << " MB (" << (s.progress_ppm / 10000) << "%)" << std::endl;
+        std::cout << "Uploaded (in this session): " << (s.total_upload / 1000000) << " MB (" << std::endl;
+        std::cout << "Download speed " << (s.download_payload_rate / 1000) << " kB/s" << std::endl;
+        std::cout << "Number of peers " << (s.num_peers) << std::endl;
+
+        if(s.num_peers > 0) {
+            h.get_peer_info(pT::g_PeerData);
+            for(auto peer : g_PeerData) {
+                std::cout << "IP: " << peer.ip << " | Client: " << (peer.client) << " | Download speed: " << (peer.down_speed / 1000) << " kB/s | Upload speed: " << (peer.up_speed / 1000) << " kB/s | Downloaded: " << (peer.total_download / 1000000) << " MB | Uploaded: " << (peer.total_upload / 1000000) << "MB" << std::endl; 
+            }
+        }
+
     }
     
     inline void Cleanup(lt::session& ses)
     {
         spdlog::info("Saving session state");
-        std::ofstream of(".session", std::ios_base::binary);
+        std::ofstream of(g_SessionPath, std::ios_base::binary);
         of.unsetf(std::ios_base::skipws);
         auto const b = libtorrent::write_session_params_buf(ses.session_state(), lt::save_state_flags_t::all());
         of.write(b.data(), int(b.size()));
@@ -111,14 +126,14 @@ namespace pT
     
     inline void DownloadTorrent(int argc, char** argv) {
         //Load session parameters
-        auto session_params = load_file(".session");
+        auto session_params = load_file(g_SessionPath.c_str());
         lt::session_params params = session_params.empty() ? lt::session_params() : lt::read_session_params(session_params);
         params.settings.set_int(lt::settings_pack::alert_mask, lt::alert_category::error | lt::alert_category::storage | lt::alert_category::status);
         lt::session ses(params);
         clk::time_point last_save_resume = clk::now();
         
         //Load resume data from disk and pass it in as we add the magnet link
-        auto buf = load_file(".resume_file");
+        auto buf = load_file(g_ResumePath.c_str());
         lt::add_torrent_params magnet = lt::parse_magnet_uri(argv[1]);
         if(buf.size()) {
             lt::add_torrent_params atp = lt::read_resume_data(buf);
@@ -168,7 +183,7 @@ namespace pT
                 
                 //When resume data is ready, save it
                 if (auto rd = lt::alert_cast<lt::save_resume_data_alert>(a)) {
-                    std::ofstream of(".resume_file", std::ios_base::binary);
+                    std::ofstream of(g_ResumePath, std::ios_base::binary);
                     of.unsetf(std::ios_base::skipws);
                     auto const b = write_resume_data_buf(rd->params);
                     of.write(b.data(), int(b.size()));
@@ -186,7 +201,7 @@ namespace pT
                     // which one the status is for
                     
                     lt::torrent_status const& s = st->status[0];
-                    ShowDownloadUploadState(s);
+                    pT::ShowDownloadUploadState(s, h);
                 }
                 
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -210,6 +225,7 @@ namespace pT
 int main(int argc, char** argv) try
 {
     pT::HelloMsg(); //Show hello message
+
     
     //Check if valid number of arguments was passed
     if(argc < 2) {
@@ -217,7 +233,8 @@ int main(int argc, char** argv) try
         spdlog::critical("Usage: ./polTorrent <magnet-url>");
         return 1;
     }
-    
+
+    pT::HandleSessionAndResumeFile();    
     pT::HandleArguments(argc, argv);
     pT::DownloadTorrent(argc, argv);
     
