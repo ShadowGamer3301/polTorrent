@@ -1,9 +1,0 @@
--I/home/zbychu/Dokumenty/polTorrent/polTorrent
--I/usr/include
--I/usr/include/c++/12.1.0
--I/usr/include/c++/12.1.0/x86_64-pc-linux-gnu
--I/usr/include/c++/12.1.0/backward
--I/usr/lib/clang/14.0.6/include
--I/usr/local/include
--target
-x86_64-pc-linux-gnu
