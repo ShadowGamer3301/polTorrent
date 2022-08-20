@@ -26,4 +26,3 @@ Additional parameters
 - Add ability to use .torrent files
 - Support for multiple torrents
 - Port application to Windows
-- Show better data (peers, seeding data, etc.)
