@@ -16,13 +16,13 @@ any ports for MacOS, IOS and Android.
 ## Example of usage
 To use polTorrent just type
 ```SHELL
-./polTorrent <magnet-url>
+./polTorrent <magnet-url> 
 ```
-
-https://user-images.githubusercontent.com/84101627/181853622-df5d6e14-83ab-487b-8cfd-375537fc3b22.mp4
+Additional parameters
+- '-v' - Turns on verbose mode which displays information about peers (IP, client, transfer speed, etc.)
+- '-s' - Enables custom save path (although session and resume file still stay in user home directory)
 
 ## Future plans
 - Add ability to use .torrent files
 - Support for multiple torrents
 - Port application to Windows
-- Show better data (peers, seeding data, etc.)
