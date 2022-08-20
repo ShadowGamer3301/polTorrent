@@ -31,9 +31,10 @@ namespace pT
 {
     //Variables that will allow to save files to custom directories
     std::string g_SavePath = "."; //By default it's current directory
-    std::string g_SessionPath; //By default it's current directory
-    std::string g_ResumePath; //By default it's current directory
-    std::vector<lt::peer_info> g_PeerData;
+    std::string g_SessionPath; 
+    std::string g_ResumePath; 
+    std::vector<lt::peer_info> g_PeerData; //Vector to store information about peers
+    bool g_VerboseData = false; //Switch for verbose information (disabled by default)
     
     inline void HandleSessionAndResumeFile() 
     {
@@ -59,6 +60,14 @@ namespace pT
             {
                 g_SavePath = argv[i];
                 i++;
+                continue;
+            }
+
+            if(std::strcmp(argv[i], "-v")) //When verbose mode is enabled information about peers is showed
+            {
+                g_VerboseData = true;
+                i++;
+                continue;
             }
         }
         
@@ -107,13 +116,15 @@ namespace pT
         std::cout << "Download speed " << (s.download_payload_rate / 1000) << " kB/s" << std::endl;
         std::cout << "Number of peers " << (s.num_peers) << std::endl;
 
-        if(s.num_peers > 0) {
-            h.get_peer_info(pT::g_PeerData);
-            for(auto peer : g_PeerData) {
-                std::cout << "IP: " << peer.ip << " | Client: " << (peer.client) << " | Download speed: " << (peer.down_speed / 1000) << " kB/s | Upload speed: " << (peer.up_speed / 1000) << " kB/s | Downloaded: " << (peer.total_download / 1000000) << " MB | Uploaded: " << (peer.total_upload / 1000000) << "MB" << std::endl; 
+        if(g_VerboseData)
+        {
+            if(s.num_peers > 0) {
+                h.get_peer_info(pT::g_PeerData);
+                for(auto peer : g_PeerData) {
+                    std::cout << "IP: " << peer.ip << " | Client: " << (peer.client) << " | Download speed: " << (peer.down_speed / 1000) << " kB/s | Upload speed: " << (peer.up_speed / 1000) << " kB/s | Downloaded: " << (peer.total_download / 1000000) << " MB | Uploaded: " << (peer.total_upload / 1000000) << "MB" << std::endl; 
+                }
             }
         }
-
     }
     
     inline void Cleanup(lt::session& ses)
